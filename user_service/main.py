@@ -44,3 +44,15 @@ def register(body: schemas.RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user
+
+
+@app.post("/users/login", response_model=schemas.TokenResponse)
+def login(body: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not auth.verify_password(body.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = auth.create_access_token({"sub": str(user.id), "email": user.email})
+    return schemas.TokenResponse(access_token=token)
