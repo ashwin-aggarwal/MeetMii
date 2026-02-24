@@ -10,6 +10,12 @@ services:
       db:
         condition: service_healthy
 
+  profile_service:
+    build: ./profile_service
+    ports:
+      - "8002:8002"
+    restart: always
+
   db:
     image: postgres:15
     environment:
