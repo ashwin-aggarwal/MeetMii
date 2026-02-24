@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from sqlalchemy import text
-from database import engine
+from database import engine, Base
+import models
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -15,3 +18,8 @@ def health():
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     return {"status": "healthy", "database": "connected"}
+
+
+@app.get("/profile/table-check")
+def table_check():
+    return {"status": "profiles table created successfully"}
