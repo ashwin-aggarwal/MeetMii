@@ -6,7 +6,8 @@ Uses passlib with bcrypt for password hashing and python-jose for JWT encoding.
 
 import os
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+from jose import jwt, JWTError
+from fastapi import HTTPException
 from passlib.context import CryptContext
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -36,3 +37,27 @@ def create_access_token(data: dict) -> str:
     payload = data.copy()
     payload["exp"] = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     return jwt.encode(payload, secret_key, algorithm=algorithm)
+
+
+def get_current_user(token: str, db):
+    """Decode a JWT token and return the corresponding User from the database.
+
+    Reads JWT_SECRET_KEY and JWT_ALGORITHM from environment variables.
+    Raises 401 if the token is invalid, expired, or the user does not exist.
+    """
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    algorithm = os.getenv("JWT_ALGORITHM", "HS256")
+
+    try:
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        email: str = payload.get("email")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    from models import User
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
