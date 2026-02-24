@@ -21,6 +21,12 @@ services:
       db:
         condition: service_healthy
 
+  qr_service:
+    build: ./qr_service
+    ports:
+      - "8003:8003"
+    restart: always
+
   db:
     image: postgres:15
     environment:
