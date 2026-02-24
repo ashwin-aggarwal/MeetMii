@@ -59,3 +59,31 @@ def upsert_profile(
     db.commit()
     db.refresh(profile)
     return profile
+
+
+@app.get("/profile/{username}", response_model=schemas.ProfileResponse)
+def get_profile(username: str, db: Session = Depends(get_db)):
+    profile = db.query(models.Profile).filter(models.Profile.username == username).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    if profile.is_professional_mode:
+        return schemas.ProfileResponse(
+            id=profile.id,
+            user_id=profile.user_id,
+            username=profile.username,
+            display_name=profile.display_name,
+            bio=profile.bio,
+            instagram=None,
+            snapchat=None,
+            linkedin=profile.linkedin,
+            twitter=None,
+            tiktok=None,
+            email=profile.email,
+            website=profile.website,
+            is_professional_mode=profile.is_professional_mode,
+            created_at=profile.created_at,
+            updated_at=profile.updated_at,
+        )
+
+    return schemas.ProfileResponse.model_validate(profile)
