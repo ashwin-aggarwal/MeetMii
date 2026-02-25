@@ -11,11 +11,24 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import colors from '../constants/colors';
+import { useThemeContext } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
+import { Typography } from '../constants/typography';
+import { Spacing } from '../constants/spacing';
+import GradientButton from '../components/GradientButton';
 import { getProfile, updateProfile } from '../services/api';
+
+const SOCIAL_FIELDS = [
+  { key: 'instagram', label: 'Instagram', hasAt: true },
+  { key: 'tiktok',    label: 'TikTok',    hasAt: true },
+  { key: 'snapchat',  label: 'Snapchat',  hasAt: true },
+  { key: 'twitter',   label: 'Twitter',   hasAt: true },
+  { key: 'linkedin',  label: 'LinkedIn',  hasAt: false },
+];
 
 export default function ProfileEditorScreen({ route, navigation }) {
   const { token, username } = route.params;
+  const { colors } = useThemeContext();
 
   const [form, setForm] = useState({
     display_name: '',
@@ -32,7 +45,7 @@ export default function ProfileEditorScreen({ route, navigation }) {
 
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState('');
+  const [toast, setToast] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -66,11 +79,11 @@ export default function ProfileEditorScreen({ route, navigation }) {
 
   async function handleSave() {
     setError('');
-    setSuccess('');
     setSaving(true);
     try {
       await updateProfile(token, form);
-      setSuccess('Profile updated!');
+      setToast('Profile saved!');
+      setTimeout(() => setToast(''), 2000);
     } catch (err) {
       setError(err?.detail || 'Failed to save profile. Please try again.');
     } finally {
@@ -80,39 +93,53 @@ export default function ProfileEditorScreen({ route, navigation }) {
 
   if (loadingProfile) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={[styles.flex, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* ── Header ── */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity style={styles.headerSide} onPress={() => navigation.goBack()}>
+          <Text style={[styles.headerBack, { color: colors.textSecondary }]}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profile</Text>
+        <TouchableOpacity style={styles.headerSide} onPress={handleSave} disabled={saving}>
+          <Text style={[styles.headerSave, { color: Colors.primary }]}>
+            {saving ? '…' : 'Save'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
-        style={styles.scroll}
+        style={styles.flex}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.screenTitle}>Edit Profile</Text>
+        {/* ── IDENTITY ── */}
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>IDENTITY</Text>
 
-        <Text style={styles.sectionLabel}>ABOUT</Text>
+        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Display Name</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Display Name"
-          placeholderTextColor={colors.textLight}
+          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+          placeholder="Your name"
+          placeholderTextColor={colors.textTertiary}
           value={form.display_name}
           onChangeText={set('display_name')}
         />
+
+        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Bio</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
-          placeholder="Bio"
-          placeholderTextColor={colors.textLight}
+          style={[styles.input, styles.multiline, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+          placeholder="Tell people about yourself"
+          placeholderTextColor={colors.textTertiary}
           value={form.bio}
           onChangeText={set('bio')}
           multiline
@@ -120,200 +147,246 @@ export default function ProfileEditorScreen({ route, navigation }) {
           textAlignVertical="top"
         />
 
-        <Text style={styles.sectionLabel}>SOCIAL LINKS</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Instagram (@username)"
-          placeholderTextColor={colors.textLight}
-          value={form.instagram}
-          onChangeText={set('instagram')}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Snapchat (@username)"
-          placeholderTextColor={colors.textLight}
-          value={form.snapchat}
-          onChangeText={set('snapchat')}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="TikTok (@username)"
-          placeholderTextColor={colors.textLight}
-          value={form.tiktok}
-          onChangeText={set('tiktok')}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Twitter (@username)"
-          placeholderTextColor={colors.textLight}
-          value={form.twitter}
-          onChangeText={set('twitter')}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="LinkedIn (profile URL or username)"
-          placeholderTextColor={colors.textLight}
-          value={form.linkedin}
-          onChangeText={set('linkedin')}
-          autoCapitalize="none"
-        />
+        {/* ── SOCIAL LINKS ── */}
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>SOCIAL LINKS</Text>
+        <View style={[styles.socialCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {SOCIAL_FIELDS.map(({ key, label, hasAt }, index) => (
+            <View
+              key={key}
+              style={[
+                styles.socialRow,
+                index < SOCIAL_FIELDS.length - 1 && {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.socialLabel, { color: Colors.primary }]}>{label}</Text>
+              {hasAt && (
+                <Text style={[styles.atSign, { color: colors.textTertiary }]}>@</Text>
+              )}
+              <TextInput
+                style={[styles.socialInput, { color: colors.text }]}
+                placeholder="username"
+                placeholderTextColor={colors.textTertiary}
+                value={form[key]}
+                onChangeText={set(key)}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          ))}
+        </View>
 
-        <Text style={styles.sectionLabel}>CONTACT</Text>
+        {/* ── CONTACT ── */}
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>CONTACT</Text>
+
+        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Email</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.textLight}
+          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+          placeholder="email@example.com"
+          placeholderTextColor={colors.textTertiary}
           value={form.email}
           onChangeText={set('email')}
           autoCapitalize="none"
           keyboardType="email-address"
         />
+
+        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Website</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Website"
-          placeholderTextColor={colors.textLight}
+          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+          placeholder="https://yourwebsite.com"
+          placeholderTextColor={colors.textTertiary}
           value={form.website}
           onChangeText={set('website')}
           autoCapitalize="none"
           keyboardType="url"
         />
 
-        <Text style={styles.sectionLabel}>SETTINGS</Text>
-        <View style={styles.toggleRow}>
+        {/* ── SETTINGS ── */}
+        <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>SETTINGS</Text>
+        <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.toggleText}>
-            <Text style={styles.toggleLabel}>Professional Mode</Text>
-            <Text style={styles.toggleSubtitle}>Only show LinkedIn and email</Text>
+            <Text style={[styles.toggleLabel, { color: colors.text }]}>Professional Mode</Text>
+            <Text style={[styles.toggleSubtitle, { color: colors.textSecondary }]}>
+              Only show LinkedIn and email to viewers
+            </Text>
           </View>
           <Switch
             value={form.is_professional_mode}
             onValueChange={set('is_professional_mode')}
-            trackColor={{ false: '#E0E0E0', true: colors.primary }}
+            trackColor={{ false: colors.border, true: Colors.primary }}
             thumbColor="#fff"
           />
         </View>
 
-        {success ? <Text style={styles.success}>{success}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        ) : null}
 
-        <TouchableOpacity style={styles.button} onPress={handleSave} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Save</Text>
-          )}
-        </TouchableOpacity>
+        <GradientButton
+          title="Save Profile"
+          onPress={handleSave}
+          loading={saving}
+          style={styles.saveButton}
+        />
       </ScrollView>
+
+      {/* ── Toast ── */}
+      {toast ? (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
   },
-  scroll: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    paddingHorizontal: 24,
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backButton: {
-    marginBottom: 8,
+  headerSide: {
+    width: 64,
   },
-  backText: {
-    color: colors.primary,
+  headerBack: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  headerTitle: {
+    ...Typography.h2,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSave: {
     fontSize: 16,
-    fontWeight: '600',
-  },
-  screenTitle: {
-    fontSize: 26,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 28,
+    textAlign: 'right',
   },
-  sectionLabel: {
+
+  // Scroll content
+  content: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+
+  // Section headers
+  sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.textLight,
     letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 8,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+
+  // Standard inputs
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: Spacing.xs,
   },
   input: {
-    width: '100%',
-    height: 50,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    height: 50,
     fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.secondary,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   multiline: {
-    height: 90,
-    paddingTop: 14,
+    height: 88,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
+
+  // Social links card
+  socialCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: Spacing.sm,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    height: 52,
+  },
+  socialLabel: {
+    width: 82,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  atSign: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginRight: 2,
+  },
+  socialInput: {
+    flex: 1,
+    fontSize: 15,
+    height: '100%',
+  },
+
+  // Professional mode toggle
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.secondary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 24,
+    borderRadius: 16,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   toggleText: {
     flex: 1,
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   toggleLabel: {
     fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   toggleSubtitle: {
     fontSize: 12,
-    color: colors.textLight,
-    marginTop: 2,
+    marginTop: 3,
   },
-  success: {
-    color: colors.success,
+
+  // Error
+  errorText: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
-  error: {
-    color: colors.error,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 12,
+
+  // Bottom save button
+  saveButton: {
+    marginTop: Spacing.sm,
   },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  // Toast
+  toast: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    backgroundColor: '#1A1A1A',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  toastText: { color: '#fff', fontSize: 14, fontWeight: '500' },
 });
