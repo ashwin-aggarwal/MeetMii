@@ -8,13 +8,34 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
-import colors from '../constants/colors';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useThemeContext } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
+import GradientButton from '../components/GradientButton';
 import { login, getMe } from '../services/api';
 
+function GradientText({ children, style }) {
+  return (
+    <MaskedView maskElement={<Text style={style}>{children}</Text>}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.accent]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <Text style={[style, { opacity: 0 }]}>{children}</Text>
+      </LinearGradient>
+    </MaskedView>
+  );
+}
+
 export default function LoginScreen({ navigation, onLogin }) {
+  const { colors } = useThemeContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,113 +59,110 @@ export default function LoginScreen({ navigation, onLogin }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.inner}>
-        <Text style={styles.logo}>MeetMii</Text>
-        <Text style={styles.tagline}>Share your world in one scan</Text>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <GradientText style={styles.logo}>MeetMii</GradientText>
+          <Text style={[styles.tagline, { color: colors.textSecondary }]}>
+            Share your world in one scan
+          </Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.textLight}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.textLight}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        {/* Card */}
+        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+          {/* Email */}
+          <View style={[styles.inputRow, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+            <Text style={styles.inputIcon}>✉️</Text>
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder="Email"
+              placeholderTextColor={colors.textTertiary}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          {/* Password */}
+          <View style={[styles.inputRow, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder="Password"
+              placeholderTextColor={colors.textTertiary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
+              <Text style={styles.inputIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.forgotRow}>
+            <Text style={[styles.forgot, { color: Colors.primary }]}>Forgot password?</Text>
+          </TouchableOpacity>
+
+          <GradientButton title="Login" onPress={handleLogin} loading={loading} style={styles.button} />
+        </View>
+
+        {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.link}>
+          <Text style={[styles.link, { color: colors.textSecondary }]}>
             Don't have an account?{' '}
-            <Text style={styles.linkBold}>Register</Text>
+            <Text style={{ color: Colors.primary, fontWeight: '700' }}>Register</Text>
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  inner: {
-    flex: 1,
+  container: { flex: 1 },
+  scroll: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
+    paddingVertical: 48,
   },
-  logo: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  tagline: {
-    fontSize: 15,
-    color: colors.textLight,
-    marginBottom: 40,
-  },
-  input: {
+  header: { alignItems: 'center', marginBottom: 36 },
+  logo: { fontSize: 44, fontWeight: '800', letterSpacing: -1 },
+  tagline: { fontSize: 15, marginTop: 8 },
+  card: {
     width: '100%',
-    height: 50,
+    borderRadius: 24,
+    padding: 24,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    marginBottom: 16,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.secondary,
-    marginBottom: 14,
-  },
-  error: {
-    color: colors.error,
-    fontSize: 13,
+    paddingHorizontal: 12,
     marginBottom: 12,
-    textAlign: 'center',
+    height: 52,
   },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-    marginBottom: 24,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  link: {
-    color: colors.textLight,
-    fontSize: 14,
-  },
-  linkBold: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
+  inputIcon: { fontSize: 16, marginRight: 8 },
+  input: { flex: 1, fontSize: 15 },
+  forgotRow: { alignItems: 'flex-end', marginBottom: 20 },
+  forgot: { fontSize: 13, fontWeight: '600' },
+  button: { width: '100%' },
+  error: { fontSize: 13, textAlign: 'center', marginBottom: 16 },
+  link: { fontSize: 14, textAlign: 'center' },
 });

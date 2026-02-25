@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -9,9 +10,11 @@ import HomeScreen from '../screens/HomeScreen';
 import MyCardScreen from '../screens/MyCardScreen';
 import ScannerScreen from '../screens/ScannerScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import ProfileEditorScreen from '../screens/ProfileEditorScreen';
 import ProfileViewScreen from '../screens/ProfileViewScreen';
-import colors from '../constants/colors';
+import { Colors } from '../constants/colors';
+import { useThemeContext } from '../context/ThemeContext';
 
 const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
@@ -30,14 +33,29 @@ function AuthNavigator({ onLogin }) {
   );
 }
 
-function MainTabs({ token, username }) {
+function MainTabs({ token, username, onLogout }) {
+  const { colors, isDark } = useThemeContext();
   return (
     <MainTab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textLight,
+      screenOptions={({ route }) => ({
         headerShown: false,
-      }}
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+        },
+        tabBarIcon: ({ color, size }) => {
+          const icons = {
+            Home: 'home',
+            'My Card': 'qr-code',
+            Scanner: 'scan',
+            Analytics: 'bar-chart',
+            Settings: 'settings',
+          };
+          return <Ionicons name={icons[route.name]} size={size} color={color} />;
+        },
+      })}
     >
       <MainTab.Screen
         name="Home"
@@ -55,15 +73,21 @@ function MainTabs({ token, username }) {
         name="Analytics"
         children={(props) => <AnalyticsScreen {...props} token={token} username={username} />}
       />
+      <MainTab.Screen
+        name="Settings"
+        children={(props) => (
+          <SettingsScreen {...props} token={token} username={username} onLogout={onLogout} />
+        )}
+      />
     </MainTab.Navigator>
   );
 }
 
-function MainNavigator({ token, username }) {
+function MainNavigator({ token, username, onLogout }) {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="MainTabs">
-        {(props) => <MainTabs {...props} token={token} username={username} />}
+        {(props) => <MainTabs {...props} token={token} username={username} onLogout={onLogout} />}
       </MainStack.Screen>
       <MainStack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
       <MainStack.Screen name="ProfileView" component={ProfileViewScreen} />
@@ -73,15 +97,42 @@ function MainNavigator({ token, username }) {
 
 export default function AppNavigator() {
   const [auth, setAuth] = useState({ token: null, username: null });
+  const { colors, isDark } = useThemeContext();
 
   function handleLogin(token, username) {
     setAuth({ token, username });
   }
 
+  function handleLogout() {
+    setAuth({ token: null, username: null });
+  }
+
+  const navTheme = isDark ? {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      primary: '#7C3AED',
+      background: colors.background,
+      card: colors.card,
+      text: colors.text,
+      border: colors.border,
+    },
+  } : {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: '#7C3AED',
+      background: colors.background,
+      card: colors.card,
+      text: colors.text,
+      border: colors.border,
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       {auth.token ? (
-        <MainNavigator token={auth.token} username={auth.username} />
+        <MainNavigator token={auth.token} username={auth.username} onLogout={handleLogout} />
       ) : (
         <AuthNavigator onLogin={handleLogin} />
       )}
