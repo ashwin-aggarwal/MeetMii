@@ -40,7 +40,9 @@ def upsert_profile(
 ):
     user_id = auth.get_current_user_id(token)
     payload = auth.verify_token(token)
-    username = payload.get("email", "").split("@")[0]
+    username = payload.get("username")
+    if not username:
+        raise HTTPException(status_code=401, detail="username not found in token")
 
     profile = db.query(models.Profile).filter(models.Profile.user_id == user_id).first()
 

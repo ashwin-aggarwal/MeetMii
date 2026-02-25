@@ -9,9 +9,11 @@ import HomeScreen from '../screens/HomeScreen';
 import MyCardScreen from '../screens/MyCardScreen';
 import ScannerScreen from '../screens/ScannerScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import ProfileEditorScreen from '../screens/ProfileEditorScreen';
 import colors from '../constants/colors';
 
 const AuthStack = createNativeStackNavigator();
+const MainStack = createNativeStackNavigator();
 const MainTab = createBottomTabNavigator();
 
 function AuthNavigator({ onLogin }) {
@@ -27,7 +29,7 @@ function AuthNavigator({ onLogin }) {
   );
 }
 
-function MainNavigator({ token, username }) {
+function MainTabs({ token, username }) {
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -53,6 +55,17 @@ function MainNavigator({ token, username }) {
         children={(props) => <AnalyticsScreen {...props} token={token} username={username} />}
       />
     </MainTab.Navigator>
+  );
+}
+
+function MainNavigator({ token, username }) {
+  return (
+    <MainStack.Navigator screenOptions={{ headerShown: false }}>
+      <MainStack.Screen name="MainTabs">
+        {(props) => <MainTabs {...props} token={token} username={username} />}
+      </MainStack.Screen>
+      <MainStack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
+    </MainStack.Navigator>
   );
 }
 

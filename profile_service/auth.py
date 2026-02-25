@@ -15,6 +15,8 @@ def verify_token(token: str) -> dict:
 
     Reads JWT_SECRET_KEY and JWT_ALGORITHM from environment variables.
     Raises 401 if the token is invalid or expired.
+
+    Expected payload claims: sub (user_id), email, username.
     """
     secret_key = os.getenv("JWT_SECRET_KEY")
     algorithm = os.getenv("JWT_ALGORITHM", "HS256")
@@ -36,3 +38,16 @@ def get_current_user_id(token: str) -> int:
     if sub is None:
         raise HTTPException(status_code=401, detail="user_id not found in token")
     return int(sub)
+
+
+def get_current_username(token: str) -> str:
+    """Extract and return the username from a JWT token payload.
+
+    Calls verify_token to decode the token, then pulls the 'username' claim.
+    Raises 401 if the username is not present in the payload.
+    """
+    payload = verify_token(token)
+    username = payload.get("username")
+    if username is None:
+        raise HTTPException(status_code=401, detail="username not found in token")
+    return username
