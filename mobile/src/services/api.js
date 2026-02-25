@@ -42,6 +42,21 @@ export async function login(email, password) {
 }
 
 /**
+ * Fetch the currently authenticated user's account details.
+ * GET /users/me with a Bearer token — returns id, email, username, created_at.
+ */
+export async function getMe(token) {
+  try {
+    const response = await axios.get(`${BASE_URLS.USER_SERVICE}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+}
+
+/**
  * Fetch the public profile for a given username.
  * GET /profile/{username} — no auth required.
  * Returns the profile object.
