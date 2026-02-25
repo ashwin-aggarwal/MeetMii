@@ -22,3 +22,9 @@ def health():
 def log_scan(body: schemas.ScanEvent):
     bigquery_client.log_scan(body.username, body.ip_address)
     return {"status": "scan logged", "username": body.username}
+
+
+@app.get("/analytics/{username}/stats", response_model=schemas.ScanStatsResponse)
+def get_stats(username: str):
+    stats = bigquery_client.get_scan_stats(username)
+    return schemas.ScanStatsResponse(username=username, **stats)

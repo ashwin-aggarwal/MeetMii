@@ -76,3 +76,35 @@ def log_scan(username: str, ip_address: str = None) -> bool:
     if errors:
         raise RuntimeError(f"BigQuery insert failed: {errors}")
     return True
+
+
+def get_scan_stats(username: str) -> dict:
+    """Query BigQuery for scan counts for a given username.
+
+    Runs three COUNT queries against scan_events:
+      - total_scans: all rows matching the username
+      - scans_this_week: rows from the last 7 days
+      - scans_this_month: rows from the last 30 days
+
+    Returns a dict with those three keys. Returns all zeros if the
+    username has no recorded scans.
+    """
+    table = f"`{PROJECT_ID}.{DATASET_ID}.scan_events`"
+
+    def run(where_clause: str) -> int:
+        query = f"SELECT COUNT(*) as count FROM {table} WHERE username = @username AND {where_clause}"
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("username", "STRING", username)]
+        )
+        rows = list(client.query(query, job_config=job_config).result())
+        return rows[0].count if rows else 0
+
+    total = run("TRUE")
+    this_week = run("scanned_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)")
+    this_month = run("scanned_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)")
+
+    return {
+        "total_scans": total,
+        "scans_this_week": this_week,
+        "scans_this_month": this_month,
+    }
