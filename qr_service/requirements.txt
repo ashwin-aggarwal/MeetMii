@@ -2,3 +2,5 @@ fastapi
 uvicorn
 qrcode[pil]
 pillow
+google-cloud-pubsub
+python-dotenv

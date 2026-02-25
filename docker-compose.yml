@@ -26,6 +26,12 @@ services:
     ports:
       - "8003:8003"
     restart: always
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/credentials.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/tmp/keys/credentials.json:ro
 
   analytics_service:
     build: ./analytics_service
