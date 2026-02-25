@@ -18,7 +18,7 @@ export default function GradientButton({ onPress, title, loading, disabled, styl
       style={[styles.wrapper, style]}
     >
       <LinearGradient
-        colors={[Colors.primary, Colors.accent]}
+        colors={['#7C3AED', '#9F7AEA']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[styles.gradient, (disabled || loading) && styles.dimmed]}

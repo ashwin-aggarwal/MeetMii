@@ -1,203 +1,235 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   Image,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import colors from '../constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useThemeContext } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
+import { Typography } from '../constants/typography';
+import { Spacing } from '../constants/spacing';
+import Card from '../components/Card';
+import GradientButton from '../components/GradientButton';
 import { getScanStats, getProfile, getQRCode } from '../services/api';
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function SkeletonBox({ width, height, style, colors }) {
+  return (
+    <View
+      style={[
+        { width, height, borderRadius: 12, backgroundColor: colors.cardSecondary },
+        style,
+      ]}
+    />
+  );
+}
+
 export default function HomeScreen({ navigation, token, username }) {
+  const { colors, isDark } = useThemeContext();
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
         const [profileData, statsData] = await Promise.all([
           getProfile(username).catch(() => null),
           getScanStats(username).catch(() => null),
         ]);
         setProfile(profileData);
         setStats(statsData);
-      } finally {
         setLoading(false);
       }
-    }
-    load();
-  }, [username]);
+      load();
+    }, [username])
+  );
 
   const displayName = profile?.display_name || username;
   const qrUrl = getQRCode(username);
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.scroll, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={[styles.greeting, { color: colors.textSecondary }]}>
+            {greeting()} 👋
+          </Text>
+          {loading ? (
+            <SkeletonBox width={180} height={36} style={{ marginTop: 4 }} colors={colors} />
+          ) : (
+            <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[styles.settingsBtn, { backgroundColor: colors.cardSecondary }]}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
 
-      {/* Welcome */}
-      <Text style={styles.welcomeLabel}>Welcome back,</Text>
-      <Text style={styles.displayName}>{displayName}</Text>
+      {/* ── Hero banner ── */}
+      {loading ? (
+        <SkeletonBox width="100%" height={140} style={{ borderRadius: 20, marginBottom: Spacing.lg }} colors={colors} />
+      ) : (
+        <LinearGradient
+          colors={['#7C3AED', '#6D28D9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.banner}
+        >
+          <Text style={styles.bannerLabel}>Your card has been scanned</Text>
+          <Text style={styles.bannerNumber}>{stats?.scans_this_week ?? 0}</Text>
+          <Text style={styles.bannerSub}>times this week</Text>
+        </LinearGradient>
+      )}
 
-      {/* Stats row */}
+      {/* ── Quick stats ── */}
       <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats?.scans_this_week ?? '—'}</Text>
-          <Text style={styles.statLabel}>Scans this week</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats?.total_scans ?? '—'}</Text>
-          <Text style={styles.statLabel}>Total scans</Text>
-        </View>
+        {loading ? (
+          <>
+            <SkeletonBox width="47%" height={90} style={{ borderRadius: 20 }} colors={colors} />
+            <SkeletonBox width="47%" height={90} style={{ borderRadius: 20 }} colors={colors} />
+          </>
+        ) : (
+          <>
+            <Card style={styles.statCard}>
+              <Text style={[styles.statNumber, { color: Colors.primary }]}>
+                {stats?.total_scans ?? 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total scans</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={[styles.statNumber, { color: Colors.primary }]}>
+                {stats?.scans_this_month ?? 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>This month</Text>
+            </Card>
+          </>
+        )}
       </View>
 
-      {/* QR preview */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Card</Text>
-        <View style={styles.qrCard}>
-          <Image
-            source={{ uri: qrUrl }}
-            style={styles.qr}
-            resizeMode="contain"
-          />
-          <TouchableOpacity
-            style={styles.primaryButton}
+      {/* ── QR Code ── */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Card</Text>
+      {loading ? (
+        <SkeletonBox width="100%" height={230} style={{ borderRadius: 20, marginBottom: Spacing.lg }} colors={colors} />
+      ) : (
+        <Card style={styles.qrCard}>
+          <Image source={{ uri: qrUrl }} style={styles.qrImage} resizeMode="contain" />
+          <GradientButton
+            title="Show My Card"
             onPress={() => navigation.navigate('My Card')}
-          >
-            <Text style={styles.primaryButtonText}>Show My Card</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            style={styles.qrButton}
+          />
+        </Card>
+      )}
 
-      {/* Edit profile */}
-      <TouchableOpacity
-        style={styles.outlineButton}
-        onPress={() => navigation.navigate('ProfileEditor', { token, username })}
-      >
-        <Text style={styles.outlineButtonText}>Edit Profile</Text>
-      </TouchableOpacity>
-
+      {/* ── Edit profile ── */}
+      {!loading && (
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={() => navigation.navigate('ProfileEditor', { token, username })}
+        >
+          <Card style={styles.editRow}>
+            <View style={styles.editLeft}>
+              <View style={[styles.editIconWrap, { backgroundColor: colors.cardSecondary }]}>
+                <Ionicons name="person-outline" size={18} color={Colors.primary} />
+              </View>
+              <Text style={[styles.editLabel, { color: colors.text }]}>Complete your profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Card>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
+  scroll: { flex: 1 },
+  content: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.xxl,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+  },
+  headerText: { flex: 1, marginRight: Spacing.md },
+  greeting: { fontSize: 14, fontWeight: '500', marginBottom: 4 },
+  displayName: { ...Typography.h1 },
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
   },
-  scroll: {
-    flex: 1,
-    backgroundColor: colors.background,
+
+  // Banner
+  banner: {
+    borderRadius: 20,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.lg,
   },
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 64,
-    paddingBottom: 48,
-  },
-  welcomeLabel: {
-    fontSize: 16,
-    color: colors.textLight,
-    marginBottom: 4,
-  },
-  displayName: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: colors.primary,
-    marginBottom: 28,
-  },
+  bannerLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500', marginBottom: 4 },
+  bannerNumber: { color: '#fff', fontSize: 52, fontWeight: '800', letterSpacing: -1, lineHeight: 58 },
+  bannerSub: { color: 'rgba(255,255,255,0.75)', fontSize: 14, marginTop: 2 },
+
+  // Stats
   statsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: Spacing.lg,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingVertical: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingVertical: Spacing.sm + 4,
   },
-  statNumber: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textLight,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  qrCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 24,
+  statNumber: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  statLabel: { fontSize: 11, fontWeight: '500', marginTop: 2, textAlign: 'center' },
+
+  // QR
+  sectionTitle: { ...Typography.h3, marginBottom: Spacing.sm },
+  qrCard: { alignItems: 'center', marginBottom: Spacing.md, padding: Spacing.lg },
+  qrImage: { width: 150, height: 150, marginBottom: Spacing.lg },
+  qrButton: { width: '100%' },
+
+  // Edit row
+  editRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
-  qr: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
-  },
-  primaryButton: {
-    width: '100%',
-    height: 46,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  outlineButton: {
-    width: '100%',
-    height: 46,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outlineButtonText: {
-    color: colors.primary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  editLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  editIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  editLabel: { ...Typography.h4 },
 });

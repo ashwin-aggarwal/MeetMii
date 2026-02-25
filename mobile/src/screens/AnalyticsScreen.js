@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import colors from '../constants/colors';
 import { getScanStats } from '../services/api';
 
@@ -36,9 +37,11 @@ export default function AnalyticsScreen({ username }) {
     }
   }, [username]);
 
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchStats();
+    }, [fetchStats])
+  );
 
   return (
     <View style={styles.container}>
