@@ -10,6 +10,7 @@ import MyCardScreen from '../screens/MyCardScreen';
 import ScannerScreen from '../screens/ScannerScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import ProfileEditorScreen from '../screens/ProfileEditorScreen';
+import ProfileViewScreen from '../screens/ProfileViewScreen';
 import colors from '../constants/colors';
 
 const AuthStack = createNativeStackNavigator();
@@ -65,6 +66,7 @@ function MainNavigator({ token, username }) {
         {(props) => <MainTabs {...props} token={token} username={username} />}
       </MainStack.Screen>
       <MainStack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
+      <MainStack.Screen name="ProfileView" component={ProfileViewScreen} />
     </MainStack.Navigator>
   );
 }
