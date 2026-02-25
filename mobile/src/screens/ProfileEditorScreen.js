@@ -14,7 +14,7 @@ import {
 import colors from '../constants/colors';
 import { getProfile, updateProfile } from '../services/api';
 
-export default function ProfileEditorScreen({ route }) {
+export default function ProfileEditorScreen({ route, navigation }) {
   const { token, username } = route.params;
 
   const [form, setForm] = useState({
@@ -96,6 +96,9 @@ export default function ProfileEditorScreen({ route }) {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
         <Text style={styles.screenTitle}>Edit Profile</Text>
 
         <Text style={styles.sectionLabel}>ABOUT</Text>
@@ -223,6 +226,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 40,
+  },
+  backButton: {
+    marginBottom: 8,
+  },
+  backText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   screenTitle: {
     fontSize: 26,
