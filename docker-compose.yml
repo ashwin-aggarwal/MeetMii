@@ -27,6 +27,12 @@ services:
       - "8003:8003"
     restart: always
 
+  analytics_service:
+    build: ./analytics_service
+    ports:
+      - "8004:8004"
+    restart: always
+
   db:
     image: postgres:15
     environment:
