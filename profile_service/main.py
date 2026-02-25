@@ -65,12 +65,13 @@ def upsert_profile(
 
 
 @app.get("/profile/{username}", response_model=schemas.ProfileResponse)
-def get_profile(username: str, db: Session = Depends(get_db)):
+def get_profile(username: str, source: str = None, db: Session = Depends(get_db)):
     profile = db.query(models.Profile).filter(models.Profile.username == username).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    pubsub_publisher.publish_scan_event(username)
+    if source != "app":
+        pubsub_publisher.publish_scan_event(username)
 
     if profile.is_professional_mode:
         return schemas.ProfileResponse(

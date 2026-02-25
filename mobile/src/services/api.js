@@ -63,7 +63,9 @@ export async function getMe(token) {
  */
 export async function getProfile(username) {
   try {
-    const response = await axios.get(`${BASE_URLS.PROFILE_SERVICE}/profile/${username}`);
+    const response = await axios.get(`${BASE_URLS.PROFILE_SERVICE}/profile/${username}`, {
+      params: { source: 'app' },
+    });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
