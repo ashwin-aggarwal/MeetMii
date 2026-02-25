@@ -2,7 +2,6 @@ from io import BytesIO
 import qrcode
 from fastapi import FastAPI
 from fastapi.responses import Response
-import pubsub_publisher
 
 app = FastAPI()
 
@@ -37,7 +36,5 @@ def generate_qr(username: str):
     img.save(buffer, format="PNG")
     buffer.seek(0)
     image_bytes = buffer.read()
-
-    pubsub_publisher.publish_scan_event(username)
 
     return Response(content=image_bytes, media_type="image/png")

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,32 @@ import {
   Share,
   StyleSheet,
 } from 'react-native';
-import colors from '../constants/colors';
-import { getQRCode } from '../services/api';
+import * as Clipboard from 'expo-clipboard';
+import { useFocusEffect } from '@react-navigation/native';
+import { useThemeContext } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
+import { Typography } from '../constants/typography';
+import { Spacing } from '../constants/spacing';
+import Card from '../components/Card';
+import GradientButton from '../components/GradientButton';
+import { getQRCode, getProfile } from '../services/api';
 
 export default function MyCardScreen({ username }) {
-  const [loading, setLoading] = useState(true);
+  const { colors, isDark } = useThemeContext();
+  const [displayName, setDisplayName] = useState('');
+  const [qrLoading, setQrLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const qrUrl = getQRCode(username);
   const profileUrl = `https://meetmii.com/${username}`;
+
+  useFocusEffect(
+    useCallback(() => {
+      getProfile(username)
+        .then((p) => setDisplayName(p.display_name || username))
+        .catch(() => setDisplayName(username));
+    }, [username])
+  );
 
   async function handleShare() {
     try {
@@ -26,32 +44,80 @@ export default function MyCardScreen({ username }) {
     } catch (_) {}
   }
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Card</Text>
+  async function handleCopy() {
+    await Clipboard.setStringAsync(profileUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
-      <View style={styles.qrWrapper}>
-        {loading && (
-          <ActivityIndicator
-            style={StyleSheet.absoluteFill}
-            size="large"
-            color={colors.primary}
-          />
-        )}
-        <Image
-          source={{ uri: qrUrl }}
-          style={styles.qr}
-          onLoadEnd={() => setLoading(false)}
-          resizeMode="contain"
-        />
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Card</Text>
       </View>
 
-      <Text style={styles.username}>@{username}</Text>
-      <Text style={styles.subtitle}>Scan to connect with me</Text>
+      {/* ── Content ── */}
+      <View style={styles.content}>
+        {/* Card with purple glow */}
+        <Card
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? '#0D0D1A' : colors.card,
+              shadowColor: '#7C3AED',
+              shadowOpacity: isDark ? 0.4 : 0.18,
+              shadowRadius: 28,
+              elevation: 10,
+            },
+          ]}
+        >
+          {/* Identity */}
+          <Text style={[styles.displayName, { color: colors.text }]} numberOfLines={1}>
+            {displayName}
+          </Text>
+          <Text style={[styles.username, { color: colors.textSecondary }]}>@{username}</Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleShare}>
-        <Text style={styles.buttonText}>Share Profile</Text>
-      </TouchableOpacity>
+          {/* Divider */}
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* QR Code */}
+          <View style={styles.qrWrapper}>
+            {qrLoading && (
+              <ActivityIndicator
+                style={StyleSheet.absoluteFill}
+                size="large"
+                color={Colors.primary}
+              />
+            )}
+            <Image
+              source={{ uri: qrUrl }}
+              style={styles.qrImage}
+              resizeMode="contain"
+              onLoadEnd={() => setQrLoading(false)}
+            />
+          </View>
+
+          {/* Caption */}
+          <Text style={[styles.caption, { color: colors.textTertiary }]}>
+            Scan to connect with me
+          </Text>
+        </Card>
+
+        {/* ── Action buttons ── */}
+        <View style={styles.actions}>
+          <GradientButton title="Share" onPress={handleShare} style={styles.shareBtn} />
+          <TouchableOpacity
+            style={[styles.copyBtn, { borderColor: Colors.primary }]}
+            onPress={handleCopy}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.copyText, { color: Colors.primary }]}>
+              {copied ? '✓ Copied' : 'Copy Link'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -59,50 +125,83 @@ export default function MyCardScreen({ username }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+  },
+
+  // Header
+  header: {
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...Typography.h2,
+  },
+
+  // Content
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 32,
-  },
-  qrWrapper: {
-    width: 260,
-    height: 260,
+
+  // Card internals
+  card: {
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
-  qr: {
-    width: 260,
-    height: 260,
+  displayName: {
+    ...Typography.h2,
+    marginBottom: Spacing.xs,
   },
   username: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 6,
+    ...Typography.body,
+    marginBottom: Spacing.md,
   },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textLight,
-    marginBottom: 36,
-  },
-  button: {
+  divider: {
     width: '100%',
-    height: 50,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
+    height: StyleSheet.hairlineWidth,
+    marginBottom: Spacing.md,
+  },
+  qrWrapper: {
+    width: 220,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  qrImage: {
+    width: 220,
+    height: 220,
+  },
+  caption: {
+    ...Typography.caption,
+    marginBottom: Spacing.sm,
+  },
+
+  // Actions
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: Spacing.lg,
+    width: '100%',
+  },
+  shareBtn: {
+    flex: 1,
+  },
+  copyBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  copyText: {
+    ...Typography.button,
   },
 });
