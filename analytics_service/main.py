@@ -1,11 +1,20 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import bigquery_client
+import pubsub_subscriber
 import schemas
 
 bigquery_client.get_or_create_dataset()
 bigquery_client.get_or_create_table()
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    pubsub_subscriber.start_subscriber()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
