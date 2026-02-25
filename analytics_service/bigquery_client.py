@@ -54,3 +54,25 @@ def get_or_create_table():
         return client.create_table(table)
     except Conflict:
         return client.get_table(table_ref)
+
+
+def log_scan(username: str, ip_address: str = None) -> bool:
+    """Insert a scan event row into the scan_events BigQuery table.
+
+    Sets scanned_at to the current UTC timestamp automatically.
+    Returns True on success, raises an exception if the insert fails.
+    """
+    from datetime import datetime, timezone
+
+    table_ref = f"{PROJECT_ID}.{DATASET_ID}.scan_events"
+    rows = [
+        {
+            "username": username,
+            "scanned_at": datetime.now(timezone.utc).isoformat(),
+            "ip_address": ip_address,
+        }
+    ]
+    errors = client.insert_rows_json(table_ref, rows)
+    if errors:
+        raise RuntimeError(f"BigQuery insert failed: {errors}")
+    return True
