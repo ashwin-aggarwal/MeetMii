@@ -11,28 +11,35 @@ import {
   Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../context/ThemeContext';
 import { Colors } from '../constants/colors';
+import { Typography } from '../constants/typography';
+import { Spacing } from '../constants/spacing';
 import { getProfile, updateProfile } from '../services/api';
 
-function SectionHeader({ label, colors }) {
+function SectionLabel({ label, colors }) {
   return (
-    <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>{label}</Text>
+    <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>{label}</Text>
   );
 }
 
-function SettingsRow({ icon, label, right, onPress, colors, noBorder }) {
+function SettingRow({ icon, label, right, onPress, colors, isLast }) {
   return (
     <TouchableOpacity
       style={[
         styles.row,
-        { backgroundColor: colors.card, borderBottomColor: colors.border },
-        noBorder && { borderBottomWidth: 0 },
+        !isLast && {
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border,
+        },
       ]}
       onPress={onPress}
       activeOpacity={onPress ? 0.6 : 1}
     >
-      <Text style={styles.rowIcon}>{icon}</Text>
+      <View style={[styles.rowIconWrap, { backgroundColor: colors.cardSecondary }]}>
+        <Text style={styles.rowIcon}>{icon}</Text>
+      </View>
       <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
       <View style={styles.rowRight}>{right}</View>
     </TouchableOpacity>
@@ -40,8 +47,7 @@ function SettingsRow({ icon, label, right, onPress, colors, noBorder }) {
 }
 
 export default function SettingsScreen({ token, username, onLogout }) {
-  const { colors, isDark, mode, toggleTheme } = useThemeContext();
-  const [profile, setProfile] = useState(null);
+  const { colors, isDark, toggleTheme } = useThemeContext();
   const [editingName, setEditingName] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -52,7 +58,6 @@ export default function SettingsScreen({ token, username, onLogout }) {
   useEffect(() => {
     getProfile(username)
       .then((p) => {
-        setProfile(p);
         setDisplayName(p.display_name || '');
         setProMode(p.is_professional_mode || false);
       })
@@ -110,19 +115,25 @@ export default function SettingsScreen({ token, username, onLogout }) {
     ]);
   }
 
-  const modeLabel = mode === 'system' ? 'System' : isDark ? 'Dark' : 'Light';
-
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
 
-        {/* ACCOUNT */}
-        <SectionHeader label="ACCOUNT" colors={colors} />
-        <View style={[styles.section, { borderColor: colors.border }]}>
+        {/* ── ACCOUNT ── */}
+        <SectionLabel label="ACCOUNT" colors={colors} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {editingName ? (
-            <View style={[styles.row, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-              <Text style={styles.rowIcon}>✏️</Text>
+            <View
+              style={[
+                styles.row,
+                { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+              ]}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: colors.cardSecondary }]}>
+                <Text style={styles.rowIcon}>✏️</Text>
+              </View>
               <TextInput
                 style={[styles.nameInput, { color: colors.text, borderColor: colors.border }]}
                 value={displayName}
@@ -138,7 +149,7 @@ export default function SettingsScreen({ token, username, onLogout }) {
               </TouchableOpacity>
             </View>
           ) : (
-            <SettingsRow
+            <SettingRow
               icon="✏️"
               label="Display Name"
               right={
@@ -150,7 +161,7 @@ export default function SettingsScreen({ token, username, onLogout }) {
               colors={colors}
             />
           )}
-          <SettingsRow
+          <SettingRow
             icon="💼"
             label="Professional Mode"
             right={
@@ -163,19 +174,21 @@ export default function SettingsScreen({ token, username, onLogout }) {
               />
             }
             colors={colors}
-            noBorder
+            isLast
           />
         </View>
 
-        {/* APPEARANCE */}
-        <SectionHeader label="APPEARANCE" colors={colors} />
-        <View style={[styles.section, { borderColor: colors.border }]}>
-          <SettingsRow
+        {/* ── APPEARANCE ── */}
+        <SectionLabel label="APPEARANCE" colors={colors} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <SettingRow
             icon={isDark ? '🌙' : '☀️'}
             label="Dark Mode"
             right={
               <View style={styles.toggleWithLabel}>
-                <Text style={[styles.rowValue, { color: colors.textSecondary }]}>{modeLabel}</Text>
+                <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                  {isDark ? 'Dark' : 'Light'}
+                </Text>
                 <Switch
                   value={isDark}
                   onValueChange={toggleTheme}
@@ -185,47 +198,46 @@ export default function SettingsScreen({ token, username, onLogout }) {
               </View>
             }
             colors={colors}
-            noBorder
+            isLast
           />
         </View>
 
-        {/* SHARING */}
-        <SectionHeader label="SHARING" colors={colors} />
-        <View style={[styles.section, { borderColor: colors.border }]}>
-          <SettingsRow
+        {/* ── SHARING ── */}
+        <SectionLabel label="SHARING" colors={colors} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <SettingRow
             icon="🔗"
             label="Copy Profile Link"
-            right={<Text style={[styles.arrow, { color: colors.textTertiary }]}>›</Text>}
+            right={<Ionicons name="copy-outline" size={18} color={colors.textTertiary} />}
             onPress={copyLink}
             colors={colors}
           />
-          <SettingsRow
+          <SettingRow
             icon="📤"
             label="Share QR Code"
-            right={<Text style={[styles.arrow, { color: colors.textTertiary }]}>›</Text>}
+            right={<Ionicons name="share-outline" size={18} color={colors.textTertiary} />}
             onPress={shareQR}
             colors={colors}
-            noBorder
+            isLast
           />
         </View>
 
-        {/* ABOUT */}
-        <SectionHeader label="ABOUT" colors={colors} />
-        <View style={[styles.section, { borderColor: colors.border }]}>
-          <SettingsRow
+        {/* ── ABOUT ── */}
+        <SectionLabel label="ABOUT" colors={colors} />
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <SettingRow
             icon="ℹ️"
             label="App Version"
-            right={<Text style={[styles.rowValue, { color: colors.textSecondary }]}>1.0.0</Text>}
+            right={
+              <Text style={[styles.rowValue, { color: colors.textSecondary }]}>1.0.0</Text>
+            }
             colors={colors}
-            noBorder
+            isLast
           />
         </View>
 
         {/* Logout */}
-        <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: colors.card }]}
-          onPress={handleLogout}
-        >
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -242,41 +254,50 @@ export default function SettingsScreen({ token, username, onLogout }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    paddingHorizontal: 24,
+    ...Typography.h2,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 64,
-    paddingBottom: 20,
+    paddingBottom: Spacing.lg,
   },
-  sectionHeader: {
+  sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 6,
-    marginTop: 8,
+    marginTop: Spacing.xs,
   },
-  section: {
-    marginHorizontal: 16,
+
+  // Section card
+  card: {
+    marginHorizontal: Spacing.md,
     borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 8,
-    borderWidth: 1,
+    marginBottom: Spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
+
+  // Row
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  rowIcon: { fontSize: 18, marginRight: 12, width: 28 },
+  rowIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rowIcon: { fontSize: 16 },
   rowLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
   rowRight: { alignItems: 'flex-end' },
   rowValue: { fontSize: 14 },
-  arrow: { fontSize: 22, fontWeight: '400' },
   toggleWithLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nameInput: {
     flex: 1,
@@ -288,15 +309,18 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   saveText: { fontSize: 15, fontWeight: '700' },
+
+  // Logout
   logoutButton: {
-    marginHorizontal: 16,
-    marginTop: 16,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
     marginBottom: 48,
-    borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
   },
   logoutText: { fontSize: 16, fontWeight: '700', color: '#EF4444' },
+
+  // Toast
   toast: {
     position: 'absolute',
     bottom: 40,

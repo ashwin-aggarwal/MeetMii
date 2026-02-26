@@ -3,23 +3,32 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import colors from '../constants/colors';
+import { useThemeContext } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
+import { Typography } from '../constants/typography';
+import { Spacing } from '../constants/spacing';
+import Card from '../components/Card';
 import { getScanStats } from '../services/api';
 
-function StatCard({ value, label }) {
+function SkeletonBox({ width, height, style, colors }) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardNumber}>{value}</Text>
-      <Text style={styles.cardLabel}>{label}</Text>
-    </View>
+    <View
+      style={[
+        { width, height, borderRadius: 16, backgroundColor: colors.cardSecondary },
+        style,
+      ]}
+    />
   );
 }
 
 export default function AnalyticsScreen({ username }) {
+  const { colors } = useThemeContext();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,7 +40,7 @@ export default function AnalyticsScreen({ username }) {
       const data = await getScanStats(username);
       setStats(data);
     } catch (_) {
-      setError('Failed to load analytics. Please try again.');
+      setError('Failed to load analytics.');
     } finally {
       setLoading(false);
     }
@@ -44,97 +53,159 @@ export default function AnalyticsScreen({ username }) {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Your Analytics</Text>
-      <Text style={styles.subtitle}>@{username}</Text>
+    <ScrollView
+      style={[styles.scroll, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Analytics</Text>
+        <TouchableOpacity
+          style={[styles.refreshBtn, { backgroundColor: colors.cardSecondary }]}
+          onPress={fetchStats}
+          disabled={loading}
+        >
+          <Ionicons
+            name="refresh"
+            size={18}
+            color={loading ? colors.textTertiary : Colors.primary}
+          />
+        </TouchableOpacity>
+      </View>
 
-      {loading && <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />}
+      {/* ── Total scans banner ── */}
+      {loading ? (
+        <SkeletonBox
+          width="100%"
+          height={140}
+          style={{ borderRadius: 20, marginBottom: Spacing.lg }}
+          colors={colors}
+        />
+      ) : (
+        <LinearGradient
+          colors={['#7C3AED', '#6D28D9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.banner}
+        >
+          <Text style={styles.bannerLabel}>Total Scans</Text>
+          <Text style={styles.bannerNumber}>{stats?.total_scans ?? 0}</Text>
+          <Text style={styles.bannerSub}>all time</Text>
+        </LinearGradient>
+      )}
 
-      {!loading && error ? (
-        <Text style={styles.error}>{error}</Text>
+      {/* ── This Week / This Month ── */}
+      <View style={styles.statsRow}>
+        {loading ? (
+          <>
+            <SkeletonBox width="47%" height={90} style={{ borderRadius: 20 }} colors={colors} />
+            <SkeletonBox width="47%" height={90} style={{ borderRadius: 20 }} colors={colors} />
+          </>
+        ) : (
+          <>
+            <Card style={styles.statCard}>
+              <Text style={[styles.statNumber, { color: Colors.primary }]}>
+                {stats?.scans_this_week ?? 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>This Week</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={[styles.statNumber, { color: Colors.primary }]}>
+                {stats?.scans_this_month ?? 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>This Month</Text>
+            </Card>
+          </>
+        )}
+      </View>
+
+      {/* ── Scan History info card ── */}
+      {!loading && (
+        <Card style={styles.historyCard}>
+          <View style={styles.historyRow}>
+            <View style={[styles.historyIcon, { backgroundColor: colors.cardSecondary }]}>
+              <Ionicons name="bar-chart-outline" size={20} color={Colors.primary} />
+            </View>
+            <View style={styles.historyText}>
+              <Text style={[styles.historyTitle, { color: colors.text }]}>Scan History</Text>
+              <Text style={[styles.historySub, { color: colors.textSecondary }]}>
+                Every scan is logged in real time
+              </Text>
+            </View>
+          </View>
+        </Card>
+      )}
+
+      {error ? (
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
       ) : null}
-
-      {!loading && stats ? (
-        <View style={styles.grid}>
-          <StatCard value={stats.total_scans} label="Total Scans" />
-          <StatCard value={stats.scans_this_week} label="This Week" />
-          <StatCard value={stats.scans_this_month} label="This Month" />
-        </View>
-      ) : null}
-
-      <TouchableOpacity style={styles.refreshButton} onPress={fetchStats} disabled={loading}>
-        <Text style={styles.refreshText}>Refresh</Text>
-      </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
+  scroll: { flex: 1 },
+  content: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.xxl,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 64,
-    paddingHorizontal: 24,
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textLight,
-    marginBottom: 40,
-  },
-  spinner: {
-    marginTop: 40,
-  },
-  error: {
-    color: colors.error,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  grid: {
-    width: '100%',
-    gap: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardNumber: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: colors.primary,
-    marginBottom: 6,
-  },
-  cardLabel: {
-    fontSize: 14,
-    color: colors.textLight,
-    fontWeight: '500',
-  },
-  refreshButton: {
-    marginTop: 32,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+  headerTitle: { ...Typography.h2 },
+  refreshBtn: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  refreshText: {
-    color: colors.primary,
-    fontSize: 15,
-    fontWeight: '600',
+
+  // Banner
+  banner: {
+    borderRadius: 20,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.lg,
   },
+  bannerLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500', marginBottom: 4 },
+  bannerNumber: { color: '#fff', fontSize: 52, fontWeight: '800', letterSpacing: -1, lineHeight: 58 },
+  bannerSub: { color: 'rgba(255,255,255,0.75)', fontSize: 14, marginTop: 2 },
+
+  // Stats row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: Spacing.lg,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.sm + 4,
+  },
+  statNumber: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  statLabel: { fontSize: 11, fontWeight: '500', marginTop: 2, textAlign: 'center' },
+
+  // History card
+  historyCard: { marginBottom: Spacing.md },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  historyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyText: { flex: 1 },
+  historyTitle: { ...Typography.h4 },
+  historySub: { fontSize: 13, marginTop: 2 },
+
+  errorText: { fontSize: 14, textAlign: 'center', marginTop: Spacing.md },
 });

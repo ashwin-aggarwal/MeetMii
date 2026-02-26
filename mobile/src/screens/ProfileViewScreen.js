@@ -8,49 +8,27 @@ import {
   Linking,
   StyleSheet,
 } from 'react-native';
-import colors from '../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { useThemeContext } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
+import { Typography } from '../constants/typography';
+import { Spacing } from '../constants/spacing';
+import Card from '../components/Card';
 import { getProfile } from '../services/api';
 
 const SOCIAL_LINKS = [
-  {
-    key: 'instagram',
-    label: 'Instagram',
-    url: (v) => `https://instagram.com/${v}`,
-  },
-  {
-    key: 'snapchat',
-    label: 'Snapchat',
-    url: (v) => `https://snapchat.com/add/${v}`,
-  },
-  {
-    key: 'tiktok',
-    label: 'TikTok',
-    url: (v) => `https://tiktok.com/@${v}`,
-  },
-  {
-    key: 'twitter',
-    label: 'Twitter',
-    url: (v) => `https://twitter.com/${v}`,
-  },
-  {
-    key: 'linkedin',
-    label: 'LinkedIn',
-    url: (v) => `https://linkedin.com/in/${v}`,
-  },
-  {
-    key: 'email',
-    label: 'Email',
-    url: (v) => `mailto:${v}`,
-  },
-  {
-    key: 'website',
-    label: 'Website',
-    url: (v) => v,
-  },
+  { key: 'instagram', label: 'Instagram', icon: 'logo-instagram', url: (v) => `https://instagram.com/${v}` },
+  { key: 'tiktok',    label: 'TikTok',    icon: 'musical-notes-outline', url: (v) => `https://tiktok.com/@${v}` },
+  { key: 'snapchat',  label: 'Snapchat',  icon: 'chatbubble-outline', url: (v) => `https://snapchat.com/add/${v}` },
+  { key: 'twitter',   label: 'Twitter',   icon: 'logo-twitter', url: (v) => `https://twitter.com/${v}` },
+  { key: 'linkedin',  label: 'LinkedIn',  icon: 'logo-linkedin', url: (v) => `https://linkedin.com/in/${v}` },
+  { key: 'email',     label: 'Email',     icon: 'mail-outline', url: (v) => `mailto:${v}` },
+  { key: 'website',   label: 'Website',   icon: 'globe-outline', url: (v) => v },
 ];
 
 export default function ProfileViewScreen({ route, navigation }) {
   const { username } = route.params;
+  const { colors } = useThemeContext();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -71,48 +49,88 @@ export default function ProfileViewScreen({ route, navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   if (error || !profile) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.error}>{error || 'Profile not found.'}</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>Go Back</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>
+          {error || 'Profile not found.'}
+        </Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={[styles.goBack, { color: Colors.primary }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
+  const activeLinks = SOCIAL_LINKS.filter(({ key }) => profile[key]);
 
+  return (
+    <ScrollView
+      style={[styles.scroll, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.displayName}>{profile.display_name || profile.username}</Text>
-        <Text style={styles.username}>@{profile.username}</Text>
-        {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+        <View style={styles.backBtn} />
       </View>
 
-      <View style={styles.linksSection}>
-        {SOCIAL_LINKS.map(({ key, label, url }) =>
-          profile[key] ? (
-            <TouchableOpacity
-              key={key}
-              style={styles.linkButton}
-              onPress={() => Linking.openURL(url(profile[key]))}
-            >
-              <Text style={styles.linkText}>{label}</Text>
-              <Text style={styles.linkValue}>{profile[key]}</Text>
-            </TouchableOpacity>
-          ) : null
-        )}
+      {/* ── Hero ── */}
+      <View style={styles.hero}>
+        <Text style={[styles.displayName, { color: colors.text }]}>
+          {profile.display_name || profile.username}
+        </Text>
+        <Text style={[styles.username, { color: colors.textSecondary }]}>
+          @{profile.username}
+        </Text>
+        {profile.bio ? (
+          <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text>
+        ) : null}
+      </View>
+
+      {/* ── Connect section ── */}
+      {activeLinks.length > 0 && (
+        <>
+          <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>CONNECT</Text>
+          <Card style={styles.linksCard}>
+            {activeLinks.map(({ key, label, icon, url }, index) => (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.linkRow,
+                  index < activeLinks.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                  },
+                ]}
+                onPress={() => Linking.openURL(url(profile[key]))}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.linkIconWrap, { backgroundColor: colors.cardSecondary }]}>
+                  <Ionicons name={icon} size={18} color={Colors.primary} />
+                </View>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>{label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            ))}
+          </Card>
+        </>
+      )}
+
+      {/* ── Scan logged badge ── */}
+      <View style={styles.scanBadge}>
+        <Ionicons name="checkmark-circle-outline" size={14} color={colors.textTertiary} />
+        <Text style={[styles.scanBadgeText, { color: colors.textTertiary }]}>Scan logged</Text>
       </View>
     </ScrollView>
   );
@@ -121,82 +139,94 @@ export default function ProfileViewScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: Spacing.xl,
   },
-  scroll: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  errorText: { fontSize: 16, marginBottom: Spacing.lg, textAlign: 'center' },
+  goBack: { fontSize: 16, fontWeight: '600' },
+
+  scroll: { flex: 1 },
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 56,
-    paddingBottom: 40,
+    paddingBottom: Spacing.xxl,
   },
-  backButton: {
-    marginBottom: 24,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
+  // Header
   header: {
-    alignItems: 'center',
-    marginBottom: 36,
-  },
-  displayName: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  username: {
-    fontSize: 16,
-    color: colors.textLight,
-    marginBottom: 12,
-  },
-  bio: {
-    fontSize: 15,
-    color: colors.text,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  linksSection: {
-    gap: 12,
-  },
-  linkButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    marginBottom: Spacing.xl,
   },
-  linkText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  linkValue: {
-    fontSize: 14,
-    color: colors.primary,
-    maxWidth: '60%',
-    textAlign: 'right',
+  headerTitle: { ...Typography.h3 },
+
+  // Hero
+  hero: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
   },
-  error: {
-    color: colors.error,
-    fontSize: 16,
-    marginBottom: 24,
+  displayName: {
+    ...Typography.h1,
     textAlign: 'center',
+    marginBottom: Spacing.xs,
   },
+  username: {
+    ...Typography.body,
+    marginBottom: Spacing.sm,
+  },
+  bio: {
+    ...Typography.body,
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+
+  // Section header
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: Spacing.sm,
+  },
+
+  // Links card
+  linksCard: {
+    padding: 0,
+    overflow: 'hidden',
+    marginBottom: Spacing.xl,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  linkIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkLabel: {
+    flex: 1,
+    ...Typography.h4,
+  },
+
+  // Scan badge
+  scanBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  scanBadgeText: { fontSize: 12, fontWeight: '500' },
 });
