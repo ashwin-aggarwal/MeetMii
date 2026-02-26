@@ -49,6 +49,12 @@ services:
     volumes:
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/tmp/keys/credentials.json:ro
 
+  insights_service:
+    build: ./insights_service
+    ports:
+      - "8005:8005"
+    restart: always
+
   db:
     image: postgres:15
     environment:
