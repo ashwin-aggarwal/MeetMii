@@ -5,6 +5,7 @@ const BASE_URLS = {
   PROFILE_SERVICE: 'https://profile-service-661768391098.us-central1.run.app',
   QR_SERVICE: 'https://qr-service-661768391098.us-central1.run.app',
   ANALYTICS_SERVICE: 'https://analytics-service-661768391098.us-central1.run.app',
+  INSIGHTS_SERVICE: 'https://insights-service-661768391098.us-central1.run.app',
 };
 
 /**
@@ -102,6 +103,19 @@ export function getQRCode(username) {
  * GET /analytics/{username}/stats — no auth required.
  * Returns an object with total_scans, scans_this_week, scans_this_month.
  */
+/**
+ * Fetch the latest Gemini-generated weekly insight for a given username.
+ * GET /insights/{username} — returns the insight string.
+ */
+export async function getInsight(username) {
+  try {
+    const response = await axios.get(`${BASE_URLS.INSIGHTS_SERVICE}/insights/${username}`);
+    return response.data.insight;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+}
+
 export async function getScanStats(username) {
   try {
     const response = await axios.get(

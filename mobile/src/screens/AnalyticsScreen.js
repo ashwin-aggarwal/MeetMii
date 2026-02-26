@@ -14,7 +14,7 @@ import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
 import { Spacing } from '../constants/spacing';
 import Card from '../components/Card';
-import { getScanStats } from '../services/api';
+import { getScanStats, getInsight } from '../services/api';
 
 function SkeletonBox({ width, height, style, colors }) {
   return (
@@ -30,6 +30,7 @@ function SkeletonBox({ width, height, style, colors }) {
 export default function AnalyticsScreen({ username }) {
   const { colors } = useThemeContext();
   const [stats, setStats] = useState(null);
+  const [insight, setInsight] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -37,8 +38,12 @@ export default function AnalyticsScreen({ username }) {
     setLoading(true);
     setError('');
     try {
-      const data = await getScanStats(username);
+      const [data, insightText] = await Promise.all([
+        getScanStats(username),
+        getInsight(username).catch(() => null),
+      ]);
       setStats(data);
+      setInsight(insightText);
     } catch (_) {
       setError('Failed to load analytics.');
     } finally {
@@ -119,6 +124,23 @@ export default function AnalyticsScreen({ username }) {
           </>
         )}
       </View>
+
+      {/* ── Weekly Insight ── */}
+      {loading ? (
+        <SkeletonBox
+          width="100%"
+          height={120}
+          style={{ borderRadius: 20, marginBottom: Spacing.lg }}
+          colors={colors}
+        />
+      ) : insight ? (
+        <View style={[styles.insightCard, { backgroundColor: colors.card, borderLeftColor: Colors.primary }]}>
+          <Text style={[styles.insightPowered, { color: colors.textTertiary }]}>✦ Powered by Gemini AI</Text>
+          <Text style={[styles.insightTitle, { color: colors.text }]}>Your Weekly Insight</Text>
+          <Text style={[styles.insightBody, { color: colors.textSecondary }]}>{insight}</Text>
+          <Text style={[styles.insightCaption, { color: colors.textTertiary }]}>Generated every Sunday</Text>
+        </View>
+      ) : null}
 
       {/* ── Scan History info card ── */}
       {!loading && (
@@ -206,6 +228,23 @@ const styles = StyleSheet.create({
   historyText: { flex: 1 },
   historyTitle: { ...Typography.h4 },
   historySub: { fontSize: 13, marginTop: 2 },
+
+  // Insight card
+  insightCard: {
+    borderRadius: 20,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderLeftWidth: 4,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  insightPowered: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: 6 },
+  insightTitle: { ...Typography.h4, marginBottom: Spacing.sm },
+  insightBody: { ...Typography.body, lineHeight: 22, marginBottom: Spacing.md },
+  insightCaption: { fontSize: 11, fontWeight: '500' },
 
   errorText: { fontSize: 14, textAlign: 'center', marginTop: Spacing.md },
 });
