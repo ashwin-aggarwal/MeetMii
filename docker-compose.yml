@@ -54,6 +54,12 @@ services:
     ports:
       - "8005:8005"
     restart: always
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/keys/credentials.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/tmp/keys/credentials.json:ro
 
   db:
     image: postgres:15
